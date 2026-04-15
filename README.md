@@ -1,43 +1,231 @@
-# 📊 Simulación Electoral Perú – Extrapolación por Provincias
+# 📊 Proyección Electoral Perú – Pipeline de Scraping y Extrapolación
 
-Este proyecto construye una estimación del resultado electoral nacional a partir de resultados parciales publicados por la ONPE.
+Este proyecto construye un pipeline completo para:
 
-## 🎯 Objetivo
+* Extraer resultados electorales desde la ONPE
+* Procesar información a nivel provincial (y exterior)
+* Estimar votos finales mediante extrapolación
+* Generar datasets listos para análisis y simulaciones (Monte Carlo, dashboards, etc.)
+* Registrar logs de ejecución para debugging y monitoreo
 
-Explorar si, bajo ciertos supuestos razonables, el candidato Roberto Sánchez podría superar a Rafael López Aliaga en el resultado final.
+---
 
-## ⚙️ Metodología
+## 🚀 Objetivo
 
-1. Se extraen resultados oficiales desde la web de ONPE a nivel provincial
-2. Se obtiene:
-   - votos por candidato
-   - porcentaje de actas contabilizadas
-3. Se aplica una extrapolación simple:
+A partir de resultados parciales (actas contabilizadas), se estima el resultado final de la elección utilizando un enfoque de expansión:
 
-   votos_estimados = votos_actuales / (avance_pct / 100)
+[
+votos_estimados = \frac{votos}{avance_pct / 100}
+]
 
-4. Se agregan resultados a nivel nacional
-5. Se calculan porcentajes de votos válidos
+Donde:
 
-## 📁 Archivos
+* `avance_pct` = % de **actas contabilizadas** (no procesadas)
+* Se asume distribución homogénea de actas faltantes
 
-- `codigo_provincias.ipynb` → extracción + procesamiento
-- `resultado_provincial_completo.csv` → base consolidada
-- `top20_nacional_provincial.csv` → ranking nacional proyectado
+---
 
-## ⚠️ Limitaciones
+## 🧠 Enfoque metodológico
 
-- Modelo asume que votos faltantes siguen patrón actual (sesgo potencial)
-- No incorpora heterogeneidad temporal (actas rurales vs urbanas)
-- Resultados deben interpretarse como simulación, no predicción oficial
+### ✔ Nivel de análisis
 
-## 🔬 Extensiones
+* Perú: **provincial**
+* Exterior: agregado por continente
 
-- Simulación dinámica usando diferencias entre cortes temporales
-- Ajuste por sesgo rural
-- Modelos probabilísticos (Monte Carlo)
+### ✔ Corrección clave
 
-## 👤 Autor
+El modelo usa:
+
+* `actasContabilizadas` (correcto)
+* ❌ NO usa actas procesadas
+
+Esto evita subestimar el factor de expansión.
+
+---
+
+## ⚙️ Estructura del Pipeline
+
+### 1. Scraping ONPE
+
+Se extrae:
+
+* Provincias
+* Votos por candidato
+* Actas (avance electoral)
+
+### 2. Integración
+
+* Merge votos + actas
+* Inclusión de resultados del extranjero
+
+### 3. Extrapolación
+
+Se calcula:
+
+* `votos_estimados`
+* `votos_restantes`
+
+### 4. Métricas territoriales
+
+* Participación por región
+* Peso actual vs proyectado
+
+### 5. Agregación nacional
+
+---
+
+## 📁 Outputs generados
+
+### 🔹 1. `resultado_provincial_completo.csv`
+
+Base cruda combinada:
+
+* votos reales
+* avance_pct
+
+---
+
+### 🔹 2. `base_intermedia_proyeccion.csv`
+
+Incluye:
+
+* votos estimados
+* votos restantes
+
+---
+
+### 🔹 3. `proyeccion_provincial_completa.csv` ⭐ (principal)
+
+Dataset final listo para análisis:
+
+| columna               | descripción      |
+| --------------------- | ---------------- |
+| candidato             | nombre           |
+| departamento          | región           |
+| provincia             | provincia        |
+| votos                 | votos actuales   |
+| votos_estimados       | proyección       |
+| votos_restantes       | votos faltantes  |
+| avance_pct            | % contabilizado  |
+| total_region          | total proyectado |
+| pct_region_actual     | share actual     |
+| pct_region_proyectado | share final      |
+
+---
+
+### 🔹 4. `nacional_resumen.csv`
+
+Resultado agregado nacional proyectado.
+
+---
+
+### 🔹 5. `log_proceso.csv` 🛠️
+
+Tracking completo de ejecución:
+
+| paso | tiempo_seg | error |
+| ---- | ---------- | ----- |
+
+Permite:
+
+* detectar cuellos de botella
+* debuggear scraping
+* monitorear performance
+
+---
+
+## ▶️ Cómo ejecutar
+
+```bash
+python script.py
+```
+
+Requisitos:
+
+* Python 3.10+
+* Google Chrome
+* ChromeDriver compatible
+
+---
+
+## ⚠️ Consideraciones
+
+### 🔁 Re-ejecución
+
+El script es **idempotente**:
+
+* No duplica datos
+* No modifica inputs originales
+* Puede correrse múltiples veces
+
+---
+
+### 📉 Limitaciones del modelo
+
+* Supone distribución uniforme de votos faltantes
+* No corrige sesgos territoriales
+* No modela timing de actas
+
+---
+
+## 🔥 Roadmap (próximos pasos)
+
+### 1. Modelo híbrido territorial
+
+* Lima y Callao → nivel distrital
+* Resto del país → provincial
+
+👉 Reduce sesgo urbano/marginal
+
+---
+
+### 2. Identificación de provincias críticas
+
+* Top por:
+
+  * votos restantes
+  * tamaño electoral
+
+---
+
+### 3. Simulación Monte Carlo
+
+* Variación en shares territoriales
+* Estimación probabilística de resultados
+
+---
+
+### 4. Dashboard interactivo
+
+* Tableau / Data Studio
+* Seguimiento en tiempo real
+
+---
+
+## 🧪 Uso sugerido
+
+Este dataset es ideal para:
+
+* análisis político-electoral
+* investigación académica
+* visualización de resultados
+* simulaciones probabilísticas
+
+---
+
+## 👨‍💻 Autor
+
+Proyecto desarrollado por Hugo Gutierrez
+Economista | Finanzas públicas y privadas | Data analytics
+
+---
+
+## 📌 Nota final
+
+Este proyecto busca transformar datos electorales en herramientas analíticas robustas, manteniendo transparencia metodológica y capacidad de extensión hacia modelos más complejos.
+
+---
+
 
 Hugo Gutierrez  
 Economista PUCP | Finanzas públicas y privadas
